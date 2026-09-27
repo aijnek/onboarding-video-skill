@@ -14,7 +14,7 @@
 任意の場所に clone し、Claude Code のスキルディレクトリからリンクします。
 
 ```bash
-git clone <this repo> onboarding-video
+git clone https://github.com/aijnek/onboarding-video-skill.git onboarding-video
 mkdir -p ~/.claude/skills
 ln -s "$(pwd)/onboarding-video" ~/.claude/skills/onboarding-video
 ```
