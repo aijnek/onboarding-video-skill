@@ -11,9 +11,12 @@
 
 ## インストール
 
+任意の場所に clone し、Claude Code のスキルディレクトリからリンクします。
+
 ```bash
-git clone <this repo> ~/rnd/projects/onboarding-video
-ln -s ~/rnd/projects/onboarding-video ~/.claude/skills/onboarding-video
+git clone <this repo> onboarding-video
+mkdir -p ~/.claude/skills
+ln -s "$(pwd)/onboarding-video" ~/.claude/skills/onboarding-video
 ```
 
 ## 使い方
