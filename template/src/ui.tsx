@@ -1,4 +1,4 @@
-// シリーズの動画で共通に使う見た目の部品と、ナレーション付き動画の組み立て
+// シリーズの動画で共通に使う見た目の部品と、ナレーション付き・字幕付き動画の組み立て
 import {
 	AbsoluteFill,
 	Audio,
@@ -326,34 +326,20 @@ export const NextUp: React.FC<{
 	);
 };
 
-// ナレーション付き動画の組み立て。
-// 各シーンの長さ = max(基本の長さ, ナレーションが収まる長さ)。
-// ナレーションは tts/narrate.py で生成 (public/narration/<動画>/, src/narration/<動画>.json)
+// 動画の組み立て。ナレーション付き (narratedVideo) と字幕付き (subtitledVideo) がある。
+// 各シーンの長さ = max(基本の長さ, ナレーション・字幕が収まる長さ)。
 // Check は各シーンの最後 (全要素が出そろった状態) の静止画。崩れの確認に使う
 export const NARRATION_START = 10;
 export const NARRATION_TAIL = 30;
 const TRANSITION = 15;
 
-export const narratedVideo = (
-	scenes: [React.FC, number][],
-	narration: {file: string; frames: number}[],
-) => {
-	if (scenes.length !== narration.length) {
-		throw new Error(
-			`シーン数 (${scenes.length}) とナレーション数 (${narration.length}) が一致しません。narrate.py で作り直してください`,
-		);
-	}
-	const items = scenes.map(([Comp, base], i) => ({
-		Comp,
-		audio: narration[i].file,
-		duration: Math.max(base, NARRATION_START + narration[i].frames + NARRATION_TAIL),
-	}));
+const assemble = (items: {Play: React.FC; Still: React.FC; duration: number}[]) => {
 	const durationInFrames =
 		items.reduce((sum, s) => sum + s.duration, 0) - (items.length - 1) * TRANSITION;
 
 	const Video: React.FC = () => (
 		<TransitionSeries>
-			{items.flatMap(({Comp, audio, duration}, i) => [
+			{items.flatMap(({Play, duration}, i) => [
 				...(i > 0
 					? [
 							<TransitionSeries.Transition
@@ -364,22 +350,117 @@ export const narratedVideo = (
 						]
 					: []),
 				<TransitionSeries.Sequence key={`s${i}`} durationInFrames={duration}>
-					<Comp />
-					<Sequence from={NARRATION_START}>
-						<Audio src={staticFile(audio)} />
-					</Sequence>
+					<Play />
 				</TransitionSeries.Sequence>,
 			])}
 		</TransitionSeries>
 	);
 
 	const Check: React.FC<{scene: number}> = ({scene}) => {
-		const {Comp, duration} = items[scene];
+		const {Still, duration} = items[scene];
 		return (
 			<Freeze frame={duration - TRANSITION - 1}>
-				<Comp />
+				<Still />
 			</Freeze>
 		);
 	};
 	return {Video, durationInFrames, Check, sceneCount: items.length};
+};
+
+// ナレーションは tts/narrate.py で生成 (public/narration/<動画>/, src/narration/<動画>.json)
+export const narratedVideo = (
+	scenes: [React.FC, number][],
+	narration: {file: string; frames: number}[],
+) => {
+	if (scenes.length !== narration.length) {
+		throw new Error(
+			`シーン数 (${scenes.length}) とナレーション数 (${narration.length}) が一致しません。narrate.py で作り直してください`,
+		);
+	}
+	return assemble(
+		scenes.map(([Comp, base], i) => ({
+			Play: () => (
+				<>
+					<Comp />
+					<Sequence from={NARRATION_START}>
+						<Audio src={staticFile(narration[i].file)} />
+					</Sequence>
+				</>
+			),
+			Still: Comp,
+			duration: Math.max(base, NARRATION_START + narration[i].frames + NARRATION_TAIL),
+		})),
+	);
+};
+
+// 字幕は「。」「？」「！」で区切って 1 文ずつ出す。表示時間は 1 秒あたり READING_SPEED 文字
+export const READING_SPEED = 4;
+const MIN_CUE = 45;
+const MAX_CUE_CHARS = 80; // 字幕の帯に 2 行で収まる文字数
+
+type Cue = {text: string; from: number};
+
+const Subtitles: React.FC<{cues: Cue[]}> = ({cues}) => {
+	const frame = useCurrentFrame();
+	// 次の文が出るまで前の文を出しておく (最後の文はシーンの終わりまで)
+	const cue = [...cues].reverse().find((c) => frame >= c.from);
+	if (!cue) return null;
+	return (
+		<div
+			style={{
+				position: 'absolute',
+				left: 90,
+				right: 90,
+				bottom: 30,
+				display: 'flex',
+				justifyContent: 'center',
+			}}
+		>
+			<div
+				style={{
+					background: 'rgba(0,0,0,0.72)',
+					color: '#fff',
+					fontFamily: FONT,
+					fontSize: 40,
+					lineHeight: 1.45,
+					padding: '12px 28px',
+					borderRadius: 12,
+					textAlign: 'center',
+					textWrap: 'balance',
+					wordBreak: 'auto-phrase', // 日本語を文節の区切りで折り返す (lang="ja" が要る)
+				}}
+				lang="ja"
+			>
+				{cue.text}
+			</div>
+		</div>
+	);
+};
+
+// 字幕は src/subtitles/<動画>.json (1 要素 = 1 シーンの原稿)
+export const subtitledVideo = (scenes: [React.FC, number][], script: string[]) => {
+	if (scenes.length !== script.length) {
+		throw new Error(`シーン数 (${scenes.length}) と字幕の原稿数 (${script.length}) が一致しません`);
+	}
+	return assemble(
+		scenes.map(([Comp, base], i) => {
+			const sentences = script[i].split(/(?<=[。？！])/).map((s) => s.trim()).filter(Boolean);
+			let from = NARRATION_START;
+			const cues = sentences.map((text) => {
+				if (text.length > MAX_CUE_CHARS) {
+					throw new Error(`シーン ${i} の文が長すぎます (${text.length} 文字 > ${MAX_CUE_CHARS}): ${text}`);
+				}
+				const cue = {text, from};
+				from += Math.max(MIN_CUE, Math.ceil((text.length / READING_SPEED) * 30));
+				return cue;
+			});
+			const Scene: React.FC = () => (
+				<>
+					<Comp />
+					<Subtitles cues={cues} />
+				</>
+			);
+			return {Play: Scene, Still: Scene, duration: Math.max(base, from + NARRATION_TAIL)};
+		}),
+	);
 };
