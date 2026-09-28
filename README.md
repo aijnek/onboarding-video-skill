@@ -41,3 +41,7 @@ template/         作業ディレクトリのひな形 (Remotion プロジェク
 tts/narrate.py    ナレーション生成 (お手本音声を参照して声をそろえる)
 tts/voice.py      声 (お手本音声) の候補づくりと選択
 ```
+
+## ライセンス
+
+MIT。[LICENSE](LICENSE) を参照。
