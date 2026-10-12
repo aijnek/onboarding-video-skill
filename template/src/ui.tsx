@@ -164,7 +164,8 @@ export const DrawLine: React.FC<{
 };
 
 // 文字の入れ替え: 古い文字が上へ抜け、新しい文字が下から入る。
-// 幅は長いほうの文字に合わせる。中央寄せの箱の中では align="center" にする (短いほうが左にずれないように)
+// 幅は長いほうの文字に合わせる。中央寄せの箱の中では align="center" にする (短いほうが左にずれないように)。
+// 古い文字は最初から見えている。場面の途中で書き出してから入れ替えるときは、writeAt に書き出すフレームを渡す
 export const Swap: React.FC<{
 	from: string;
 	to: string;
@@ -173,15 +174,16 @@ export const Swap: React.FC<{
 	fromColor?: string;
 	toColor?: string;
 	align?: 'left' | 'center';
+	writeAt?: number;
 	style?: React.CSSProperties;
-}> = ({from, to, at, len = 18, fromColor = C.ink, toColor = C.yellow, align = 'left', style}) => {
+}> = ({from, to, at, len = 18, fromColor = C.ink, toColor = C.yellow, align = 'left', writeAt, style}) => {
 	const t = useT(at, len);
 	const pos = {position: 'absolute', left: 0, right: 0, top: 0, textAlign: align} as const;
 	return (
 		<span style={{position: 'relative', display: 'inline-block', whiteSpace: 'pre', ...style}}>
 			<span style={{visibility: 'hidden'}}>{from.length > to.length ? from : to}</span>
 			<span style={{...pos, color: fromColor, opacity: 1 - t, transform: `translateY(${-t * 0.6}em)`}}>
-				{from}
+				{writeAt === undefined ? from : <Write text={from} at={writeAt} color={fromColor} />}
 			</span>
 			<span style={{...pos, color: toColor, opacity: t, transform: `translateY(${(1 - t) * 0.6}em)`}}>
 				{to}
