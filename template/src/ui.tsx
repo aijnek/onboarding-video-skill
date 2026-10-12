@@ -1,5 +1,5 @@
 // シリーズの動画で共通に使う部品と、場面の組み立て。
-// 見た目は 3B1B に寄せる: 黒に近い背景、細い線、図形は「描かれ」、文字は「書き出される」。
+// 見た目: 黒に近い背景、細い線、図形は「描かれ」、文字は「書き出される」。
 // 画面は 1920×1080。要素は座標で置く (Abs / DrawBox など)。Code / FileTree / Table は、
 // 置く座標から行・セル・語の位置を返すレイアウト (codeLayout など) と組で使う
 import {AbsoluteFill, Audio, Easing, Freeze, interpolate, Sequence, Series, staticFile, useCurrentFrame} from 'remotion';
@@ -21,7 +21,7 @@ export const MONO = 'Menlo, monospace';
 export const LINE = 2.5; // 線の太さ
 export const CW = 0.602; // MONO の 1 文字の幅 (em)
 
-// 3B1B の smooth に近い、出入りのゆるい動き
+// 出入りのゆるい動き
 export const ease = Easing.bezier(0.45, 0, 0.25, 1);
 const clampEase = {extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: ease} as const;
 // start から length フレームかけて 0 → 1。ループの中ではフックでない progress を使う
@@ -163,7 +163,8 @@ export const DrawLine: React.FC<{
 	);
 };
 
-// 文字の入れ替え: 古い文字が上へ抜け、新しい文字が下から入る
+// 文字の入れ替え: 古い文字が上へ抜け、新しい文字が下から入る。
+// 幅は長いほうの文字に合わせる。中央寄せの箱の中では align="center" にする (短いほうが左にずれないように)
 export const Swap: React.FC<{
 	from: string;
 	to: string;
@@ -171,16 +172,18 @@ export const Swap: React.FC<{
 	len?: number;
 	fromColor?: string;
 	toColor?: string;
+	align?: 'left' | 'center';
 	style?: React.CSSProperties;
-}> = ({from, to, at, len = 18, fromColor = C.ink, toColor = C.yellow, style}) => {
+}> = ({from, to, at, len = 18, fromColor = C.ink, toColor = C.yellow, align = 'left', style}) => {
 	const t = useT(at, len);
+	const pos = {position: 'absolute', left: 0, right: 0, top: 0, textAlign: align} as const;
 	return (
 		<span style={{position: 'relative', display: 'inline-block', whiteSpace: 'pre', ...style}}>
 			<span style={{visibility: 'hidden'}}>{from.length > to.length ? from : to}</span>
-			<span style={{position: 'absolute', left: 0, top: 0, color: fromColor, opacity: 1 - t, transform: `translateY(${-t * 0.6}em)`}}>
+			<span style={{...pos, color: fromColor, opacity: 1 - t, transform: `translateY(${-t * 0.6}em)`}}>
 				{from}
 			</span>
-			<span style={{position: 'absolute', left: 0, top: 0, color: toColor, opacity: t, transform: `translateY(${(1 - t) * 0.6}em)`}}>
+			<span style={{...pos, color: toColor, opacity: t, transform: `translateY(${(1 - t) * 0.6}em)`}}>
 				{to}
 			</span>
 		</span>
