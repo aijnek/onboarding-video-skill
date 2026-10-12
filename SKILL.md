@@ -165,7 +165,7 @@ export default video([[Title, 1], [Upload, 3], /* … */ [Next, 1]], narration);
 
 ```bash
 npx tsc --noEmit -p .
-npx remotion render <id>-sheet out/check/<id> --sequence --image-format=png --frames=0-<行数-1>
+npx remotion render src/index.ts <id>-sheet out/check/<id> --sequence --image-format=png --frames=0-<行数-1>
 ```
 
 `out/check/<id>/element-N.png` は、N 行目の 6 コマ (行の頭から、場面の終わりで物体が消え始める手前まで) を 3×2 に並べたもの。1 枚ずつ Read し、次を確かめて直す。
@@ -176,8 +176,10 @@ npx remotion render <id>-sheet out/check/<id> --sequence --image-format=png --fr
 
 #### e. 書き出し
 
+入口 (`src/index.ts`) は省略しない。macOS はファイル名の大文字・小文字を区別しないので、id が作業ディレクトリのフォルダ名 (`narration` など) と同じだと、Remotion がそのフォルダを入口と取り違える。
+
 ```bash
-npx remotion render <id> <出力先>/<リポジトリ名>-NN-<id>.mp4
+npx remotion render src/index.ts <id> <出力先>/<リポジトリ名>-NN-<id>.mp4
 node scripts/srt.mjs <id> <出力先>/<リポジトリ名>-NN-<id>.srt
 ```
 

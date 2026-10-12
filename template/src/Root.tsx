@@ -18,7 +18,7 @@ export const Root: React.FC = () => (
 				defaultProps={{}}
 			/>
 		))}
-		{/* 動きの確認用: npx remotion render <id>-sheet out/check/<id> --sequence --image-format=png --frames=0-<行数-1> */}
+		{/* 動きの確認用: npx remotion render src/index.ts <id>-sheet out/check/<id> --sequence --image-format=png --frames=0-<行数-1> */}
 		{VIDEOS.map((v) => (
 			<Composition
 				key={`${v.id}-sheet`}
