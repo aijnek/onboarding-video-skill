@@ -1,13 +1,15 @@
 # 動画のナレーション音声を Qwen3-TTS (MLX, ローカル実行) で生成する。
-# 全動画・全シーンで同じお手本音声 (voice.py で選んだもの) を参照させ、声・速さ・間をそろえる。
+# 全動画・全行で同じお手本音声 (voice.py で選んだもの) を参照させ、声・速さ・間をそろえる。
 # 作業ディレクトリ (Remotion プロジェクト) で実行する:
-#   uv run --project <skill>/tts python <skill>/tts/narrate.py Overview        # 全シーン
-#   uv run --project <skill>/tts python <skill>/tts/narrate.py Overview 0 3    # 指定したシーンだけ作り直す
-# 原稿: narration/<動画>.txt (1行 = 1シーン。読み間違いを避けるため英単語はカタカナで書く)
+#   uv run --project <skill>/tts python <skill>/tts/narrate.py Overview        # 全行
+#   uv run --project <skill>/tts python <skill>/tts/narrate.py Overview 0 3    # 指定した行だけ作り直す
+# 原稿: narration/<動画>.txt (1行 = 1行分のナレーション)。読み間違えやすい語は {表示|読み} と書くと、読みの側を読む
+#       (表示の側は scripts/srt.mjs が字幕に使う。例: {package.json|パッケージ・ジェイソン})
 # 出力: public/narration/<動画>/NN.wav と、各音声の長さ (フレーム数) を書いた src/narration/<動画>.json
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 
@@ -45,14 +47,14 @@ def longest_silence(audio):
 
 video = sys.argv[1]
 with open(f"narration/{video}.txt") as f:
-    NARRATION = [line.strip() for line in f if line.strip()]
+    NARRATION = [re.sub(r"\{[^|}]*\|([^}]*)\}", r"\1", line.strip()) for line in f if line.strip()]
 out_json = f"src/narration/{video}.json"
 
 targets = [int(a) for a in sys.argv[2:]] or list(range(len(NARRATION)))
 if targets != list(range(len(NARRATION))):
     with open(out_json) as f:
         result = json.load(f)
-    result += [None] * (len(NARRATION) - len(result))  # 原稿の末尾にシーンを足した場合
+    result += [None] * (len(NARRATION) - len(result))  # 原稿の末尾に行を足した場合
 else:
     result = [None] * len(NARRATION)
 
@@ -69,7 +71,7 @@ for i in targets:
     )
     audio = np.concatenate([np.array(r.audio) for r in chunks])
     sf.write(raw, audio, SAMPLE_RATE)
-    # シーン間で音量をそろえる (Remotion 同梱の ffmpeg)
+    # 行の間で音量をそろえる (Remotion 同梱の ffmpeg)
     subprocess.run(
         ["npx", "remotion", "ffmpeg", "-y", "-v", "error", "-i", raw,
          "-af", "loudnorm=I=-16:TP=-1.5", "-ar", str(SAMPLE_RATE), f"public/{file}"],
