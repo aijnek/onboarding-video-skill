@@ -1,8 +1,8 @@
 import {Composition} from 'remotion';
-import type {narratedVideo} from './ui';
+import {SHEET, type video} from './ui';
 
 // 作った動画をここに足す: import Overview from './videos/Overview'; → VIDEOS に {id: 'Overview', ...Overview}
-const VIDEOS: ({id: string} & ReturnType<typeof narratedVideo>)[] = [];
+const VIDEOS: ({id: string} & ReturnType<typeof video>)[] = [];
 
 export const Root: React.FC = () => (
 	<>
@@ -18,17 +18,17 @@ export const Root: React.FC = () => (
 				defaultProps={{}}
 			/>
 		))}
-		{/* 崩れ確認用: npx remotion still <id>-check out/check/NN.png --props='{"scene":N}' */}
+		{/* 動きの確認用: npx remotion render src/index.ts <id>-sheet out/check/<id> --sequence --image-format=png --frames=0-<行数-1> */}
 		{VIDEOS.map((v) => (
 			<Composition
-				key={`${v.id}-check`}
-				id={`${v.id}-check`}
-				component={v.Check}
-				durationInFrames={v.durationInFrames} // Freeze の指定フレームが収まる長さが要る
-				width={1920}
-				height={1080}
+				key={`${v.id}-sheet`}
+				id={`${v.id}-sheet`}
+				component={v.Sheet}
+				durationInFrames={v.durationInFrames}
+				width={SHEET.width}
+				height={SHEET.height}
 				fps={30}
-				defaultProps={{scene: 0}}
+				defaultProps={{}}
 			/>
 		))}
 	</>
